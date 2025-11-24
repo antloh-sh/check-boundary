@@ -2,35 +2,100 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <!-- Make the page responsive on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Check Service Boundary</title>
     <!-- Use the standard CDN link for supabase-js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
     <style>
+      /* Page container */
+      :root{
+        --page-max-width: 720px;
+        --gap: 0.75rem;
+        --accent: #0b5fff;
+        --danger: #c62828;
+      }
+
       /* Standardise the page font and base text settings */
       body {
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         font-size: 16px;
         line-height: 1.4;
         color: #111;
-        margin: 1rem;
+        margin: 0;
+        padding: 1rem;
+        background: #fff;
+        -webkit-font-smoothing:antialiased;
+        -moz-osx-font-smoothing:grayscale;
       }
 
-      /* spacing between the search controls and the output */
+      .container {
+        max-width: var(--page-max-width);
+        margin: 0 auto;
+        padding: 1rem;
+      }
+
+      header h1 {
+        font-size: 1.25rem;
+        margin: 0 0 var(--gap) 0;
+      }
+
+      /* Controls area */
       #controls {
-        margin-bottom: 1.25rem;
         display: flex;
         gap: 0.5rem;
         align-items: center;
+        margin-bottom: 1rem;
+        /* allow wrapping so inputs fit on small screens */
+        flex-wrap: wrap;
+      }
+
+      /* make label visually compact on narrow screens but accessible */
+      #controls label {
+        min-width: 8ch;
+      }
+
+      /* Make inputs and button easier to tap on mobile and stretch to available width */
+      input[type="text"], button {
+        font: inherit;
+        box-sizing: border-box;
+      }
+
+      input[type="text"]{
+        flex: 1 1 160px;        /* allow to grow, but not collapse too far */
+        min-width: 120px;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        min-height: 44px;       /* ensure touch target is large enough */
+      }
+
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.55rem 0.9rem;
+        cursor: pointer;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      button:active {
+        transform: translateY(1px);
       }
 
       #result {
         margin-top: 0.5rem;
+        word-break: break-word;
       }
 
       /* make "Out of boundary" appear in red */
       .out {
-        color: red;
+        color: var(--danger);
       }
 
       /* make the service boundary result large, bold, and spaced */
@@ -38,7 +103,7 @@
         display: block;
         margin-top: 1rem;    /* line spacing above the boundary result */
         margin-bottom: 0.75rem;
-        font-size: 1.5rem;   /* large font */
+        font-size: 1.25rem;   /* large font */
         font-weight: 700;    /* bold */
         line-height: 1.2;
       }
@@ -51,26 +116,69 @@
       input[type="text"], button {
         font: inherit;
       }
+
+      /* subtle card-like area for results on larger screens */
+      .result-card {
+        padding: 0.75rem;
+        border-radius: 10px;
+        background: #fafafa;
+        border: 1px solid #eee;
+      }
+
+      /* Responsive tweaks */
+      @media (max-width: 420px) {
+        header h1 {
+          font-size: 1.05rem;
+        }
+
+        /* stack the controls vertically on very small screens */
+        #controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        #controls label {
+          margin-bottom: 0.25rem;
+        }
+
+        .boundary {
+          font-size: 1.1rem;
+        }
+      }
+
+      /* High-contrast focus outlines for accessibility */
+      input:focus, button:focus {
+        outline: 3px solid rgba(11, 95, 255, 0.15);
+        outline-offset: 3px;
+      }
     </style>
   </head>
   <body>
-    <h1>Check Service Boundary</h1>
+    <div class="container">
+      <header>
+        <h1>Check Service Boundary</h1>
+      </header>
 
-    <div id="controls">
-      <label for="postalInput">Enter postal code:</label>
-      <input type="text" id="postalInput" placeholder="e.g. 123456" />
-      <button id="checkBtn">Check</button>
+      <div id="controls" aria-live="off">
+        <label for="postalInput">Postal code</label>
+        <!-- Use inputmode and pattern to bring up numeric keyboard on mobile -->
+        <input type="text" id="postalInput" placeholder="e.g. 123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" aria-label="Postal code (6 digits)"/>
+        <button id="checkBtn" aria-label="Check service boundary">Check</button>
+      </div>
+
+      <div id="result" class="result-card" aria-live="polite"></div>
     </div>
-
-    <div id="result" aria-live="polite"></div>
 
     <script>
       const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
       // truncated/placeholder key left as in original file
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew'
 
       let supabaseClient;
       const resultEl = document.getElementById('result');
+
+      // Guard to prevent concurrent/double runs
+      let isChecking = false;
 
       document.addEventListener('DOMContentLoaded', () => {
         resultEl.textContent = "Initializing Supabase...";
@@ -89,6 +197,14 @@
 
         // wire up the button
         document.getElementById('checkBtn').addEventListener('click', checkPostal);
+
+        // Use keydown for Enter handling (more consistent across devices) and prevent duplicates
+        document.getElementById('postalInput').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            checkPostal();
+          }
+        });
       });
 
       async function fetchOneMapAddress(postalInput) {
@@ -114,82 +230,99 @@
       }
 
       async function checkPostal() {
-        // clear previous result
-        resultEl.innerHTML = '';
-        const postalCode = document.getElementById('postalInput').value.trim();
-        if (!postalCode) {
-          const p = document.createElement('p');
-          p.className = 'status';
-          p.textContent = 'Please enter a postal code.';
-          resultEl.appendChild(p);
-          return;
-        }
+        // Prevent duplicate/concurrent checks
+        if (isChecking) return;
+        isChecking = true;
 
-        // show a brief status
-        const statusP = document.createElement('p');
-        statusP.className = 'status';
-        statusP.textContent = 'Checking...';
-        resultEl.appendChild(statusP);
-
-        // 1) Query OneMap for address (show address result)
-        let address = null;
-        try {
-          statusP.textContent = 'Querying OneMap for address...';
-          address = await fetchOneMapAddress(postalCode);
-        } catch (err) {
-          // show OneMap error but continue to Supabase check
-          const errP = document.createElement('p');
-          errP.className = 'status';
-          errP.textContent = err.message;
-          resultEl.appendChild(errP);
-        }
-
-        const addrP = document.createElement('p');
-        addrP.className = 'status';
-        addrP.textContent = 'Address: ' + (address || 'No address found for that postal code.');
-        resultEl.appendChild(addrP);
-
-        // 2) Query Supabase for service boundary
-        if (!supabaseClient) {
-          const supP = document.createElement('p');
-          supP.className = 'status';
-          supP.textContent = 'Supabase not initialized!';
-          resultEl.appendChild(supP);
-          return;
-        }
+        // disable controls while checking (visual signal + prevents extra interactions)
+        const checkBtn = document.getElementById('checkBtn');
+        const postalInput = document.getElementById('postalInput');
+        checkBtn.disabled = true;
+        postalInput.disabled = true;
 
         try {
-          statusP.textContent = `Querying Supabase for postal code: ${postalCode}...`;
-
-          // Use maybeSingle() so a 0-row result returns data = null instead of an error.
-          const { data, error } = await supabaseClient
-            .from('postal_codes')
-            .select('postal_code')
-            .eq('postal_code', postalCode)
-            .maybeSingle();
-
-          if (error) {
-            const errP = document.createElement('p');
-            errP.className = 'status';
-            errP.textContent = 'Error: ' + error.message;
-            resultEl.appendChild(errP);
+          // clear previous result
+          resultEl.innerHTML = '';
+          const postalCode = postalInput.value.trim();
+          if (!postalCode) {
+            const p = document.createElement('p');
+            p.className = 'status';
+            p.textContent = 'Please enter a postal code.';
+            resultEl.appendChild(p);
             return;
           }
 
-          const boundaryP = document.createElement('p');
-          boundaryP.className = 'status boundary'; // apply spacing, large font and bold
-          if (data) {
-            boundaryP.textContent = 'In service boundary';
-          } else {
-            boundaryP.textContent = 'Out of boundary';
-            boundaryP.classList.add('out'); // makes it red
+          // show a brief status (single status element reused)
+          const statusP = document.createElement('p');
+          statusP.className = 'status';
+          statusP.textContent = 'Checking...';
+          resultEl.appendChild(statusP);
+
+          // 1) Query OneMap for address (show address result)
+          let address = null;
+          try {
+            statusP.textContent = 'Querying OneMap for address...';
+            address = await fetchOneMapAddress(postalCode);
+          } catch (err) {
+            // show OneMap error but continue to Supabase check
+            const errP = document.createElement('p');
+            errP.className = 'status';
+            errP.textContent = err.message;
+            resultEl.appendChild(errP);
           }
-          resultEl.appendChild(boundaryP);
-        } catch (err) {
-          const exP = document.createElement('p');
-          exP.className = 'status';
-          exP.textContent = 'Exception: ' + err;
-          resultEl.appendChild(exP);
+
+          const addrP = document.createElement('p');
+          addrP.className = 'status';
+          addrP.textContent = 'Address: ' + (address || 'No address found for that postal code.');
+          resultEl.appendChild(addrP);
+
+          // 2) Query Supabase for service boundary
+          if (!supabaseClient) {
+            const supP = document.createElement('p');
+            supP.className = 'status';
+            supP.textContent = 'Supabase not initialized!';
+            resultEl.appendChild(supP);
+            return;
+          }
+
+          try {
+            statusP.textContent = `Querying Supabase for postal code: ${postalCode}...`;
+
+            // Use maybeSingle() so a 0-row result returns data = null instead of an error.
+            const { data, error } = await supabaseClient
+              .from('postal_codes')
+              .select('postal_code')
+              .eq('postal_code', postalCode)
+              .maybeSingle();
+
+            if (error) {
+              const errP = document.createElement('p');
+              errP.className = 'status';
+              errP.textContent = 'Error: ' + error.message;
+              resultEl.appendChild(errP);
+              return;
+            }
+
+            const boundaryP = document.createElement('p');
+            boundaryP.className = 'status boundary'; // apply spacing, large font and bold
+            if (data) {
+              boundaryP.textContent = 'In service boundary';
+            } else {
+              boundaryP.textContent = 'Out of boundary';
+              boundaryP.classList.add('out'); // makes it red
+            }
+            resultEl.appendChild(boundaryP);
+          } catch (err) {
+            const exP = document.createElement('p');
+            exP.className = 'status';
+            exP.textContent = 'Exception: ' + err;
+            resultEl.appendChild(exP);
+          }
+        } finally {
+          // Re-enable controls and clear guard
+          checkBtn.disabled = false;
+          postalInput.disabled = false;
+          isChecking = false;
         }
       }
     </script>
