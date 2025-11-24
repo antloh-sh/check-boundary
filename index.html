@@ -1,9 +1,12 @@
 <html>
   <head>
+    <title>Check Service Boundary</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   </head>
   <body>
-    <input type="text" id="postalInput" placeholder="Enter postal code">
+    <h1>Check Service Boundary</h1>
+    <label for="postalInput">Enter postal code:</label>
+    <input type="text" id="postalInput" placeholder="e.g. 123456">
     <button onclick="checkPostal()">Check</button>
     <div id="result"></div>
     <script>
@@ -13,7 +16,7 @@
       document.getElementById('result').innerText = "Initializing Supabase...";
 
       try {
-        supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        supabase = Supabase.createClient(supabaseUrl, supabaseKey);
         document.getElementById('result').innerText = "Supabase initialized. Ready.";
       } catch (e) {
         document.getElementById('result').innerText = "Supabase init failed: " + e;
@@ -25,7 +28,7 @@
           document.getElementById('result').innerText = 'Supabase not initialized!';
           return;
         }
-        const postalCode = document.getElementById('postalInput').value;
+        const postalCode = document.getElementById('postalInput').value.trim();
         if (!postalCode) {
           document.getElementById('result').innerText = 'Please enter a postal code.';
           return;
