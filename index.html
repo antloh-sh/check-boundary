@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  </head>
+  <body>
+    <input type="text" id="postalInput" placeholder="Enter postal code">
+    <button onclick="checkPostal()">Check</button>
+    <div id="result"></div>
+    <script>
+      const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
+      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+      async function checkPostal() {
+        const postalCode = document.getElementById('postalInput').value;
+        const { data, error } = await supabase
+          .from('postal_codes')
+          .select('postal_code')
+          .eq('postal_code', postalCode)
+          .single();
+
+        if (data) {
+          document.getElementById('result').innerText = 'In boundary';
+        } else {
+          document.getElementById('result').innerText = 'Out of boundary';
+        }
+      }
+    </script>
+  </body>
+</html>
