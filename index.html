@@ -1,7 +1,8 @@
 <html>
   <head>
     <title>Check Service Boundary</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Use the standard CDN link for supabase-js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   </head>
   <body>
     <h1>Check Service Boundary</h1>
@@ -12,11 +13,11 @@
     <script>
       const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
+
       let supabase;
       document.getElementById('result').innerText = "Initializing Supabase...";
 
       try {
-        // Use lowercase supabase
         supabase = supabase.createClient(supabaseUrl, supabaseKey);
         document.getElementById('result').innerText = "Supabase initialized. Ready.";
       } catch (e) {
@@ -49,7 +50,7 @@
           }
 
           if (data) {
-            document.getElementById('result').innerText = 'In boundary';
+            document.getElementById('result').innerText = 'In service boundary';
           } else {
             document.getElementById('result').innerText = 'Out of boundary';
           }
