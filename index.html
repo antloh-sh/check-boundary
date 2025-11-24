@@ -1,25 +1,79 @@
+<!doctype html>
 <html>
   <head>
+    <meta charset="utf-8" />
     <title>Check Service Boundary</title>
     <!-- Use the standard CDN link for supabase-js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+    <style>
+      /* Standardise the page font and base text settings */
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.4;
+        color: #111;
+        margin: 1rem;
+      }
+
+      /* spacing between the search controls and the output */
+      #controls {
+        margin-bottom: 1.25rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      #result {
+        margin-top: 0.5rem;
+      }
+
+      /* make "Out of boundary" appear in red */
+      .out {
+        color: red;
+      }
+
+      /* make the service boundary result large, bold, and spaced */
+      .boundary {
+        display: block;
+        margin-top: 1rem;    /* line spacing above the boundary result */
+        margin-bottom: 0.75rem;
+        font-size: 1.5rem;   /* large font */
+        font-weight: 700;    /* bold */
+        line-height: 1.2;
+      }
+
+      .status {
+        margin: 0.25rem 0;
+      }
+
+      /* small polish for inputs and button to match font */
+      input[type="text"], button {
+        font: inherit;
+      }
+    </style>
   </head>
   <body>
     <h1>Check Service Boundary</h1>
-    <label for="postalInput">Enter postal code:</label>
-    <input type="text" id="postalInput" placeholder="e.g. 123456">
-    <button id="checkBtn">Check</button>
-    <div id="result"></div>
+
+    <div id="controls">
+      <label for="postalInput">Enter postal code:</label>
+      <input type="text" id="postalInput" placeholder="e.g. 123456" />
+      <button id="checkBtn">Check</button>
+    </div>
+
+    <div id="result" aria-live="polite"></div>
 
     <script>
       const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
+      // truncated/placeholder key left as in original file
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
 
       let supabaseClient;
       const resultEl = document.getElementById('result');
 
       document.addEventListener('DOMContentLoaded', () => {
-        resultEl.innerText = "Initializing Supabase...";
+        resultEl.textContent = "Initializing Supabase...";
 
         try {
           // Ensure the CDN script created a global. Use window.supabase to avoid local shadowing.
@@ -28,29 +82,85 @@
           }
 
           supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-          resultEl.innerText = "Supabase initialized. Ready.";
+          resultEl.textContent = "Supabase initialized. Ready.";
         } catch (e) {
-          resultEl.innerText = "Supabase init failed: " + e;
+          resultEl.textContent = "Supabase init failed: " + e;
         }
 
         // wire up the button
         document.getElementById('checkBtn').addEventListener('click', checkPostal);
       });
 
-      async function checkPostal() {
-        resultEl.innerText = 'Checking connection...';
-        if (!supabaseClient) {
-          resultEl.innerText = 'Supabase not initialized!';
-          return;
-        }
-        const postalCode = document.getElementById('postalInput').value.trim();
-        if (!postalCode) {
-          resultEl.innerText = 'Please enter a postal code.';
-          return;
-        }
-        resultEl.innerText = 'Querying Supabase for postal code: ' + postalCode;
+      async function fetchOneMapAddress(postalInput) {
+        const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${encodeURIComponent(
+          postalInput
+        )}&returnGeom=Y&getAddrDetails=Y`;
 
         try {
+          const resp = await fetch(url);
+          if (!resp.ok) {
+            throw new Error(`OneMap API returned ${resp.status}`);
+          }
+          const payload = await resp.json();
+          if (payload && Array.isArray(payload.results) && payload.results.length > 0) {
+            // Return the ADDRESS field from the first result (if present)
+            return payload.results[0].ADDRESS || null;
+          }
+          return null;
+        } catch (err) {
+          // propagate error to caller
+          throw new Error('OneMap fetch failed: ' + err.message);
+        }
+      }
+
+      async function checkPostal() {
+        // clear previous result
+        resultEl.innerHTML = '';
+        const postalCode = document.getElementById('postalInput').value.trim();
+        if (!postalCode) {
+          const p = document.createElement('p');
+          p.className = 'status';
+          p.textContent = 'Please enter a postal code.';
+          resultEl.appendChild(p);
+          return;
+        }
+
+        // show a brief status
+        const statusP = document.createElement('p');
+        statusP.className = 'status';
+        statusP.textContent = 'Checking...';
+        resultEl.appendChild(statusP);
+
+        // 1) Query OneMap for address (show address result)
+        let address = null;
+        try {
+          statusP.textContent = 'Querying OneMap for address...';
+          address = await fetchOneMapAddress(postalCode);
+        } catch (err) {
+          // show OneMap error but continue to Supabase check
+          const errP = document.createElement('p');
+          errP.className = 'status';
+          errP.textContent = err.message;
+          resultEl.appendChild(errP);
+        }
+
+        const addrP = document.createElement('p');
+        addrP.className = 'status';
+        addrP.textContent = 'Address: ' + (address || 'No address found for that postal code.');
+        resultEl.appendChild(addrP);
+
+        // 2) Query Supabase for service boundary
+        if (!supabaseClient) {
+          const supP = document.createElement('p');
+          supP.className = 'status';
+          supP.textContent = 'Supabase not initialized!';
+          resultEl.appendChild(supP);
+          return;
+        }
+
+        try {
+          statusP.textContent = `Querying Supabase for postal code: ${postalCode}...`;
+
           // Use maybeSingle() so a 0-row result returns data = null instead of an error.
           const { data, error } = await supabaseClient
             .from('postal_codes')
@@ -59,17 +169,27 @@
             .maybeSingle();
 
           if (error) {
-            resultEl.innerText = 'Error: ' + error.message;
+            const errP = document.createElement('p');
+            errP.className = 'status';
+            errP.textContent = 'Error: ' + error.message;
+            resultEl.appendChild(errP);
             return;
           }
 
+          const boundaryP = document.createElement('p');
+          boundaryP.className = 'status boundary'; // apply spacing, large font and bold
           if (data) {
-            resultEl.innerText = 'In service boundary';
+            boundaryP.textContent = 'In service boundary';
           } else {
-            resultEl.innerText = 'Out of boundary';
+            boundaryP.textContent = 'Out of boundary';
+            boundaryP.classList.add('out'); // makes it red
           }
+          resultEl.appendChild(boundaryP);
         } catch (err) {
-          resultEl.innerText = 'Exception: ' + err;
+          const exP = document.createElement('p');
+          exP.className = 'status';
+          exP.textContent = 'Exception: ' + err;
+          resultEl.appendChild(exP);
         }
       }
     </script>
