@@ -9,20 +9,48 @@
     <script>
       const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
-      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+      let supabase;
+      document.getElementById('result').innerText = "Initializing Supabase...";
+
+      try {
+        supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        document.getElementById('result').innerText = "Supabase initialized. Ready.";
+      } catch (e) {
+        document.getElementById('result').innerText = "Supabase init failed: " + e;
+      }
 
       async function checkPostal() {
+        document.getElementById('result').innerText = 'Checking connection...';
+        if (!supabase) {
+          document.getElementById('result').innerText = 'Supabase not initialized!';
+          return;
+        }
         const postalCode = document.getElementById('postalInput').value;
-        const { data, error } = await supabase
-          .from('postal_codes')
-          .select('postal_code')
-          .eq('postal_code', postalCode)
-          .single();
+        if (!postalCode) {
+          document.getElementById('result').innerText = 'Please enter a postal code.';
+          return;
+        }
+        document.getElementById('result').innerText = 'Querying Supabase for postal code: ' + postalCode;
 
-        if (data) {
-          document.getElementById('result').innerText = 'In boundary';
-        } else {
-          document.getElementById('result').innerText = 'Out of boundary';
+        try {
+          const { data, error } = await supabase
+            .from('postal_codes')
+            .select('postal_code')
+            .eq('postal_code', postalCode)
+            .single();
+
+          if (error) {
+            document.getElementById('result').innerText = 'Error: ' + error.message;
+            return;
+          }
+
+          if (data) {
+            document.getElementById('result').innerText = 'In boundary';
+          } else {
+            document.getElementById('result').innerText = 'Out of boundary';
+          }
+        } catch (err) {
+          document.getElementById('result').innerText = 'Exception: ' + err;
         }
       }
     </script>
