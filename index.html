@@ -8,54 +8,68 @@
     <h1>Check Service Boundary</h1>
     <label for="postalInput">Enter postal code:</label>
     <input type="text" id="postalInput" placeholder="e.g. 123456">
-    <button onclick="checkPostal()">Check</button>
+    <button id="checkBtn">Check</button>
     <div id="result"></div>
+
     <script>
       const supabaseUrl = 'https://bpoaeuocoydvyvpyyyyl.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwb2FldW9jb3lkdnl2cHl5eXlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDIxNjUsImV4cCI6MjA3OTUxODE2NX0.hpcgWt7v-48PTDvchZFfShRZRYAtCCC3aS6TRBey5Ew';
 
-      let supabase;
-      document.getElementById('result').innerText = "Initializing Supabase...";
+      let supabaseClient;
+      const resultEl = document.getElementById('result');
 
-      try {
-        supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        document.getElementById('result').innerText = "Supabase initialized. Ready.";
-      } catch (e) {
-        document.getElementById('result').innerText = "Supabase init failed: " + e;
-      }
+      document.addEventListener('DOMContentLoaded', () => {
+        resultEl.innerText = "Initializing Supabase...";
+
+        try {
+          // Ensure the CDN script created a global. Use window.supabase to avoid local shadowing.
+          if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            throw new Error('Supabase library not found. Check CDN script tag or network.');
+          }
+
+          supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+          resultEl.innerText = "Supabase initialized. Ready.";
+        } catch (e) {
+          resultEl.innerText = "Supabase init failed: " + e;
+        }
+
+        // wire up the button
+        document.getElementById('checkBtn').addEventListener('click', checkPostal);
+      });
 
       async function checkPostal() {
-        document.getElementById('result').innerText = 'Checking connection...';
-        if (!supabase) {
-          document.getElementById('result').innerText = 'Supabase not initialized!';
+        resultEl.innerText = 'Checking connection...';
+        if (!supabaseClient) {
+          resultEl.innerText = 'Supabase not initialized!';
           return;
         }
         const postalCode = document.getElementById('postalInput').value.trim();
         if (!postalCode) {
-          document.getElementById('result').innerText = 'Please enter a postal code.';
+          resultEl.innerText = 'Please enter a postal code.';
           return;
         }
-        document.getElementById('result').innerText = 'Querying Supabase for postal code: ' + postalCode;
+        resultEl.innerText = 'Querying Supabase for postal code: ' + postalCode;
 
         try {
-          const { data, error } = await supabase
+          // Use maybeSingle() so a 0-row result returns data = null instead of an error.
+          const { data, error } = await supabaseClient
             .from('postal_codes')
             .select('postal_code')
             .eq('postal_code', postalCode)
-            .single();
+            .maybeSingle();
 
           if (error) {
-            document.getElementById('result').innerText = 'Error: ' + error.message;
+            resultEl.innerText = 'Error: ' + error.message;
             return;
           }
 
           if (data) {
-            document.getElementById('result').innerText = 'In service boundary';
+            resultEl.innerText = 'In service boundary';
           } else {
-            document.getElementById('result').innerText = 'Out of boundary';
+            resultEl.innerText = 'Out of boundary';
           }
         } catch (err) {
-          document.getElementById('result').innerText = 'Exception: ' + err;
+          resultEl.innerText = 'Exception: ' + err;
         }
       }
     </script>
