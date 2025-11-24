@@ -16,7 +16,8 @@
       document.getElementById('result').innerText = "Initializing Supabase...";
 
       try {
-        supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+        // Use lowercase supabase
+        supabase = supabase.createClient(supabaseUrl, supabaseKey);
         document.getElementById('result').innerText = "Supabase initialized. Ready.";
       } catch (e) {
         document.getElementById('result').innerText = "Supabase init failed: " + e;
