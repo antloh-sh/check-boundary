@@ -24,8 +24,10 @@ PING_URL="${SUPABASE_URL%/}/rest/v1/?select="
 
 # Perform request. We send both apikey and Authorization headers (standard for Supabase).
 HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-  -H "apikey: ${SUPABASE_ANON_KEY}" \
-  -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+# Replace JWT Keys with Publishable Key  
+  -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+  # -H "apikey: ${SUPABASE_ANON_KEY}" \
+  # -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \  
   --connect-timeout 10 \
   --max-time 20 \
   "${PING_URL}" || echo "000")
