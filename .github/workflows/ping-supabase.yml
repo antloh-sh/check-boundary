@@ -18,7 +18,7 @@ jobs:
       - name: Run Supabase keep-alive ping
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           # If the script exists in repo (scripts/ping-supabase.sh), execute it.
           if [[ -f "./scripts/ping-supabase.sh" ]]; then
@@ -28,8 +28,7 @@ jobs:
             # Fallback minimal curl ping if script is missing
             PING_URL="${SUPABASE_URL%/}/rest/v1/?select="
             HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-              -H "apikey: ${SUPABASE_ANON_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+              -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
               --connect-timeout 10 \
               --max-time 20 \
               "${PING_URL}" || echo "000")
