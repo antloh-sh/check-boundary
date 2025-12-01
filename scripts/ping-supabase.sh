@@ -3,19 +3,19 @@
 # Minimal Supabase "keep alive" ping script.
 # Requires:
 #   - SUPABASE_URL (e.g. https://xyzabc123.supabase.co)
-#   - SUPABASE_PUBLISHABLE_KEY (project anon/public key)
+#   - SUPABASE_ANON_KEY (project anon/public key)
 #
 # The script performs a lightweight authenticated GET to the REST endpoint.
 # It prints the HTTP status and timestamp and exits 0 so CI doesn't fail on expected 401/403.
 set -euo pipefail
 
 # Validate env
-if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_PUBLISHABLE_KEY:-}" ]]; then
+if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_ANON_KEY:-}" ]]; then
   cat <<EOF >&2
 Missing environment variables.
-Please set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.
+Please set SUPABASE_URL and SUPABASE_ANON_KEY.
 Example:
-  SUPABASE_URL="https://<project>.supabase.co" SUPABASE_PUBLISHABLE_KEY="<anon>" $0
+  SUPABASE_URL="https://<project>.supabase.co" SUPABASE_ANON_KEY="<anon>" $0
 EOF
   exit 2
 fi
@@ -24,8 +24,8 @@ PING_URL="${SUPABASE_URL%/}/rest/v1/?select="
 
 # Perform request. We send both apikey and Authorization headers (standard for Supabase).
 HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-# Replace JWT Keys with Publishable Key  
-  -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+  -H "apikey: ${SUPABASE_ANON_KEY}" \
+  # -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
   --connect-timeout 10 \
   --max-time 20 \
   "${PING_URL}" || echo "000")
