@@ -23,17 +23,18 @@ call_rpc() {
     -H "Content-Type: application/json" \
     -H "apikey: ${SUPABASE_ANON_KEY}" \
     -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-    --data '{}')
-
+    --data '{}') || curl_exit=$?
   body=$(cat /tmp/healthcheck_response.txt || true)
-
   echo "HTTP ${http_status}"
-  # Print body but redact any occurrence of the key if accidentally echoed by the server
   redacted_body="${body//${SUPABASE_ANON_KEY}/REDACTED}"
   echo "BODY: ${redacted_body}"
   rm -f /tmp/healthcheck_response.txt
-
-  return $http_status
+  # Treat any 2xx as success
+  if [[ "${http_status}" =~ ^2[0-9]{2}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # Try once, retry after short backoff if non-2xx
