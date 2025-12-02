@@ -27,6 +27,7 @@ HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
   -H "apikey: ${SUPABASE_ANON_KEY}" \
   -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
   -H "Content-Type: application/json" \
+  --data '{}' \
   --connect-timeout 10 \
   --max-time 20 \
   "${PING_URL}" || echo "000")
