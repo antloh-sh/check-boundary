@@ -8,6 +8,12 @@
     <!-- Use the standard CDN link for supabase-js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
+    <!-- Leaflet for displaying the searched postal code on a map (pinned version + SRI, matching existing CDN convention) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
       /* Page container */
       :root{
@@ -125,6 +131,16 @@
         border: 1px solid #eee;
       }
 
+      /* Map showing the searched postal code location */
+      #map {
+        display: none; /* shown once we have coordinates to plot */
+        width: 100%;
+        height: 260px;
+        margin-top: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid #eee;
+      }
+
       /* Responsive tweaks */
       @media (max-width: 420px) {
         header h1 {
@@ -167,6 +183,7 @@
       </div>
 
       <div id="result" class="result-card" aria-live="polite"></div>
+      <div id="map" role="img" aria-label="Map showing the searched postal code"></div>
     </div>
 
     <script>
@@ -174,9 +191,36 @@
       const supabaseKey = 'sb_publishable_MJQrnWCSsg0naLA9hxkPzQ__diYSGYi'
       let supabaseClient;
       const resultEl = document.getElementById('result');
+      const mapEl = document.getElementById('map');
 
       // Guard to prevent concurrent/double runs
       let isChecking = false;
+
+      // Leaflet map/marker are created once and reused/updated on subsequent searches
+      let leafletMap = null;
+      let leafletMarker = null;
+
+      function showOnMap(lat, lng, popupText) {
+        mapEl.style.display = 'block';
+
+        if (!leafletMap) {
+          leafletMap = L.map(mapEl).setView([lat, lng], 17);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }).addTo(leafletMap);
+          leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
+        } else {
+          leafletMap.setView([lat, lng], 17);
+          leafletMarker.setLatLng([lat, lng]);
+          // Leaflet needs a nudge to redraw correctly if the container was hidden (display:none) before
+          leafletMap.invalidateSize();
+        }
+
+        if (popupText) {
+          leafletMarker.bindPopup(popupText).openPopup();
+        }
+      }
 
       document.addEventListener('DOMContentLoaded', () => {
         resultEl.textContent = "Initializing Supabase...";
@@ -217,8 +261,15 @@
           }
           const payload = await resp.json();
           if (payload && Array.isArray(payload.results) && payload.results.length > 0) {
-            // Return the ADDRESS field from the first result (if present)
-            return payload.results[0].ADDRESS || null;
+            const first = payload.results[0];
+            // Return address plus lat/lng (OneMap gives these as strings) for map display
+            const lat = parseFloat(first.LATITUDE);
+            const lng = parseFloat(first.LONGITUDE);
+            return {
+              address: first.ADDRESS || null,
+              lat: Number.isFinite(lat) ? lat : null,
+              lng: Number.isFinite(lng) ? lng : null
+            };
           }
           return null;
         } catch (err) {
@@ -256,11 +307,22 @@
           statusP.textContent = 'Checking...';
           resultEl.appendChild(statusP);
 
-          // 1) Query OneMap for address (show address result)
+          // 1) Query OneMap for address + coordinates (show address result, plot on map)
           let address = null;
+          let lat = null;
+          let lng = null;
+
+          // hide any map from a previous search until we know we have coordinates
+          mapEl.style.display = 'none';
+
           try {
             statusP.textContent = 'Querying OneMap for address...';
-            address = await fetchOneMapAddress(postalCode);
+            const geo = await fetchOneMapAddress(postalCode);
+            if (geo) {
+              address = geo.address;
+              lat = geo.lat;
+              lng = geo.lng;
+            }
           } catch (err) {
             // show OneMap error but continue to Supabase check
             const errP = document.createElement('p');
@@ -273,6 +335,10 @@
           addrP.className = 'status';
           addrP.textContent = 'Address: ' + (address || 'No address found for that postal code.');
           resultEl.appendChild(addrP);
+
+          if (lat !== null && lng !== null) {
+            showOnMap(lat, lng, address || postalCode);
+          }
 
           // 2) Query Supabase for service boundary
           if (!supabaseClient) {
