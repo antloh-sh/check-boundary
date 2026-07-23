@@ -340,7 +340,16 @@
             showOnMap(lat, lng, address || postalCode);
           }
 
-          // 2) Query Supabase for service boundary
+          // 2) Query Supabase for service boundary — only meaningful if OneMap
+          // actually resolved this postal code to an address in the first place.
+          if (address === null) {
+            const boundaryP = document.createElement('p');
+            boundaryP.className = 'status boundary out';
+            boundaryP.textContent = 'Unknown Boundary';
+            resultEl.appendChild(boundaryP);
+            return;
+          }
+
           if (!supabaseClient) {
             const supP = document.createElement('p');
             supP.className = 'status';
@@ -372,7 +381,7 @@
             if (data) {
               boundaryP.textContent = 'In service boundary';
             } else {
-              boundaryP.textContent = 'Unknown Boundary';
+              boundaryP.textContent = 'Out of Boundary';
               boundaryP.classList.add('out'); // makes it red
             }
             resultEl.appendChild(boundaryP);
