@@ -1,3 +1,19 @@
+# check-boundary
+
+## Check Service Boundary (`index.html`)
+
+Single-file web app for checking whether a Singapore postal code falls within a service boundary.
+
+- Looks up the postal code via the [OneMap](https://www.onemap.gov.sg/) API to resolve an address and coordinates.
+- Plots the location on an interactive map (Leaflet, OpenStreetMap tiles).
+- Checks the postal code against the `postal_codes` table in Supabase and reports:
+  - **In service boundary** — postal code found in the table
+  - **Unknown Boundary** — postal code not found (status can't be determined, not necessarily out of area)
+
+No build step — open `index.html` directly or host it as a static page (e.g. GitHub Pages). It connects to Supabase using the publishable (anon) key hardcoded in the file, so only expose non-sensitive, RLS-protected data through it.
+
+---
+
 # supabase-daily-ping
 Simple repo to run a daily ping against a Supabase RPC healthcheck using the publishable (anon) key.
 Files:
